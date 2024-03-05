@@ -1,6 +1,9 @@
 import logging
 import math
 
+import os, sys
+sys.path.append(os.path.dirname(__file__))
+
 import slidingwindow as sw
 
 import cv2
