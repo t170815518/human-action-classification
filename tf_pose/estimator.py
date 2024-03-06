@@ -272,19 +272,20 @@ class PoseEstimator:
 
     @staticmethod
     def estimate_paf(peaks, heat_mat, paf_mat):
+        # 处理 PAF (Part Affinity Fields, 局部肢体矢量图)
         pafprocess.process_paf(peaks, heat_mat, paf_mat)
 
-        humans = []
+        humans = [] # 初始化人体列表
         for human_id in range(pafprocess.get_num_humans()):
             human = Human([])
             is_added = False
 
-            for part_idx in range(18):
+            for part_idx in range(18):  # 遍历所有的部位
                 c_idx = int(pafprocess.get_part_cid(human_id, part_idx))
                 if c_idx < 0:
                     continue
 
-                is_added = True
+                is_added = True # 如果部位存在，则添加到人体中
                 human.body_parts[part_idx] = BodyPart(
                     '%d-%d' % (human_id, part_idx), part_idx,
                     float(pafprocess.get_part_x(c_idx)) / heat_mat.shape[1],
@@ -292,7 +293,7 @@ class PoseEstimator:
                     pafprocess.get_part_score(c_idx)
                 )
 
-            if is_added:
+            if is_added:    # 如果人体中添加了部位，则将人体添加到列表中
                 score = pafprocess.get_score(human_id)
                 human.score = score
                 humans.append(human)
@@ -304,6 +305,14 @@ class TfPoseEstimator:
     # TODO : multi-scale
 
     def __init__(self, graph_path, target_size=(320, 240), tf_config=None):
+        """
+        Initializes the TfPoseEstimator object.
+
+        Args:
+            graph_path (str): The path to the graph file.
+            target_size (tuple): The target size for the image. Default is (320, 240).
+            tf_config (tf.ConfigProto, optional): The TensorFlow configuration. Default is None.
+        """
         self.target_size = target_size
 
         # load graph
