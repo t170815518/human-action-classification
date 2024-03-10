@@ -20,6 +20,46 @@ logger.addHandler(ch)
 
 fps_time = 0
 address = os.getcwd()
+
+
+def infer_image(image_path, tf_pose_estimator=None):
+	if tf_pose_estimator is None:
+		tf_pose_estimator = TfPoseEstimator(get_graph_path('mobilenet_thin'), target_size=(432, 368))
+
+	image = cv2.imread(image_path)
+	logger.info('cam image=%dx%d' % (image.shape[1], image.shape[0]))
+	# count = 0
+	logger.debug('+image processing+')
+	logger.debug('+postprocessing+')
+	start_time = time.time()
+	humans = tf_pose_estimator.inference(image, upsample_size=4.0, resize_to_default=True)
+	img = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
+	logger.debug('+classification+')
+	# Getting only the skeletal structure (with white background) of the actual image
+	image = np.zeros(image.shape, dtype=np.uint8)
+	image.fill(255)
+	image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
+	# Classification
+	pose_class = label_img.classify(image)
+	scene_class = label_img_scene.classify(image_path)
+	end_time = time.time()
+	logger.debug('+displaying+')
+	cv2.putText(img,
+				"Predicted Pose: %s" % pose_class,
+				(10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+				(0, 0, 255), 2)
+	cv2.putText(img,
+				"Predicted Scene: %s" % scene_class,
+				(10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+				(0, 0, 255), 2)
+	print('\n Overall Evaluation time (1-image): {:.3f}s\n'.format(end_time - start_time))
+	cv2.imwrite('show1.png', img)
+	cv2.imshow('tf-human-action-classification result', img)
+	cv2.waitKey(0)
+	logger.debug('+finished+')
+	cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='tf-human-action-classification')
 	parser.add_argument('--image', type=str, required=True)
@@ -29,42 +69,7 @@ if __name__ == '__main__':
 
 	logger.debug('initialization %s : %s' % ('mobilenet_thin', get_graph_path('mobilenet_thin')))
 	e = TfPoseEstimator(get_graph_path('mobilenet_thin'), target_size=(432, 368))
-	image = cv2.imread(args.image)
-	logger.info('cam image=%dx%d' % (image.shape[1], image.shape[0]))
-
-	# count = 0
-	
-	logger.debug('+image processing+')
-	logger.debug('+postprocessing+')
-	start_time = time.time()
-	humans = e.inference(image, upsample_size=4.0)
-	img = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
-	
-	logger.debug('+classification+')
-	# Getting only the skeletal structure (with white background) of the actual image
-	image = np.zeros(image.shape,dtype=np.uint8)
-	image.fill(255) 
-	image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
-	
-	# Classification
-	pose_class = label_img.classify(image)
-	scene_class = label_img_scene.classify(args.image)
-	end_time = time.time()
-	logger.debug('+displaying+')
-	cv2.putText(img,
-				"Predicted Pose: %s" %(pose_class),
-				(10, 10),  cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-				(0, 0, 255), 2)
-	cv2.putText(img,
-				"Predicted Scene: %s" %(scene_class),
-				(10, 30),  cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-				(0, 0, 255), 2)
-	print('\n Overall Evaluation time (1-image): {:.3f}s\n'.format(end_time-start_time))
-	cv2.imwrite('show1.png',img)
-	cv2.imshow('tf-human-action-classification result', img)
-	cv2.waitKey(0)
-	logger.debug('+finished+')
-	cv2.destroyAllWindows()
+	infer_image(args.image, tf_pose_estimator=e)
 
 # =============================================================================
 # For running the script simply run the following in the cmd prompt/terminal :

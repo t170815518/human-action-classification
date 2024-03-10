@@ -1,24 +1,26 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, simpledialog
 import cv2
 from run_webcam import infer_video
+from run_image import infer_image
 
 
 def real_time_inference():
-    # Implement your real-time inference here
-    pass
+    video_id = simpledialog.askstring("Input", "输入摄像头ID（比如\"0\"）")
+    if video_id.isdigit():
+        video_id = int(video_id)  # convert to int if it's a number
+    infer_video(video_id, resize_out_ratio=4.0, tf_pose_estimator=None, resize_to_default=True)
+
 
 def image_inference():
     filename = filedialog.askopenfilename()  # ask the user to choose a file
     if filename:
-        img = cv2.imread(filename)
-        # Implement your image inference here
-        pass
+        infer_image(filename, tf_pose_estimator=None)
 
 def video_inference():
     filename = filedialog.askopenfilename()  # ask the user to choose a file
     if filename:
-        infer_video(filename,resize_out_ratio=4.0, tf_pose_estimator=None, resize_to_default=True)
+        infer_video(filename, resize_out_ratio=4.0, tf_pose_estimator=None, resize_to_default=True)
 
 root = tk.Tk()
 
