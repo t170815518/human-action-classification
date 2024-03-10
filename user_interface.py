@@ -18,7 +18,7 @@ def image_inference():
 def video_inference():
     filename = filedialog.askopenfilename()  # ask the user to choose a file
     if filename:
-        infer_video(filename,resize_out_ratio=1.0, is_resize=False)
+        infer_video(filename,resize_out_ratio=4.0, tf_pose_estimator=None, resize_to_default=True)
 
 root = tk.Tk()
 

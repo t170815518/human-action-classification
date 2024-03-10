@@ -26,6 +26,55 @@ logger.addHandler(ch)
 
 fps_time = 0
 
+
+def infer_video(camera, resize_out_ratio, tf_pose_estimator=None, resize_to_default=True):
+    if tf_pose_estimator is None:
+        tf_pose_estimator = TfPoseEstimator(get_graph_path('mobilenet_thin'), target_size=(432, 368))
+
+    cam = cv2.VideoCapture(camera)  # 加载视频/摄像头
+    ret_val, image = cam.read()
+    logger.info('cam image=%dx%d' % (image.shape[1], image.shape[0]))
+    # count = 0
+    while True:  # 开始读取后面的帧
+
+        logger.debug('+image processing+')
+        ret_val, image = cam.read()
+
+        logger.debug('+postprocessing+')
+        # 检测人类和人类骨架的关键点
+        humans = tf_pose_estimator.inference(image, resize_to_default=resize_to_default, upsample_size=resize_out_ratio)
+        img = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
+
+        logger.debug('+classification+')
+        # Getting only the skeletal structure (with white background) of the actual image
+        image = np.zeros(image.shape, dtype=np.uint8)
+        image.fill(255)
+        image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
+
+        # Classification，对姿势进行分类
+        pose_class = label_img.classify(image)
+
+        logger.debug('+displaying+')
+        cv2.putText(img,
+                    "Current predicted pose is : %s" % (pose_class),
+                    (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                    (0, 255, 0), 2)
+
+        cv2.imshow('tf-pose-estimation result', img)
+
+        fps_time = time.time()
+        if cv2.waitKey(1) == 27:
+            break
+        logger.debug('+finished+')
+
+        # For gathering training data
+        # title = 'img'+str(count)+'.jpeg'
+        # path = <enter any path you want>
+        # cv2.imwrite(os.path.join(path , title), image)
+        # count += 1
+    cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='tf-pose-estimation realtime webcam')
     parser.add_argument('--camera', type=str)   # 如果是摄像头，则输入摄像头的ID，一般是0
@@ -50,50 +99,8 @@ if __name__ == '__main__':
     logger.debug('cam read+')
     if args.camera.isdigit():
         args.camera = int(args.camera)
-    cam = cv2.VideoCapture(args.camera) # 加载视频/摄像头
-    ret_val, image = cam.read()
-    logger.info('cam image=%dx%d' % (image.shape[1], image.shape[0]))
 
-    # count = 0
-    while True: # 开始读取后面的帧
-        
-        logger.debug('+image processing+')
-        ret_val, image = cam.read()
-        
-        logger.debug('+postprocessing+')
-        # 检测人类和人类骨架的关键点
-        humans = e.inference(image, resize_to_default=(w > 0 and h > 0), upsample_size=args.resize_out_ratio)
-        img = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
-        
-        logger.debug('+classification+')
-        # Getting only the skeletal structure (with white background) of the actual image
-        image = np.zeros(image.shape,dtype=np.uint8)
-        image.fill(255) 
-        image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
-        
-        # Classification，对姿势进行分类
-        pose_class = label_img.classify(image)
-        
-        logger.debug('+displaying+')
-        cv2.putText(img,
-                    "Current predicted pose is : %s" %(pose_class),
-                    (10, 10),  cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                    (0, 255, 0), 2)
-        
-        cv2.imshow('tf-pose-estimation result', img)
-        
-        fps_time = time.time()
-        if cv2.waitKey(1) == 27:
-            break
-        logger.debug('+finished+')
-        
-        # For gathering training data 
-        # title = 'img'+str(count)+'.jpeg'
-        # path = <enter any path you want>
-        # cv2.imwrite(os.path.join(path , title), image)
-        # count += 1
-
-    cv2.destroyAllWindows()
+    infer_video(args.camera, args.resize_out_ratio, tf_pose_estimator=e, resize_to_default=(w > 0 and h > 0))
 
 # =============================================================================
 # For running the script simply run the following in the cmd prompt/terminal :
